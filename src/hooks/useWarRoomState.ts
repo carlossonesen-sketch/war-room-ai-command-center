@@ -4,6 +4,7 @@ import type {
   ChatId,
   ChatMessage,
   OpenAISettings,
+  PanelWidths,
   PlanningCategory,
   ProjectContext,
   ProjectNotes,
@@ -72,6 +73,8 @@ const defaultOpenAISettings: OpenAISettings = {
   model: "gpt-4o-mini",
   useRealAi: false
 };
+
+const defaultPanelWidths: PanelWidths = [1, 1, 1.7, 1, 1];
 
 const individualChatIds: Array<Exclude<ChatId, "group">> = [
   "desktop",
@@ -166,6 +169,20 @@ function normalizeOpenAISettings(settings: Partial<OpenAISettings> | undefined):
   };
 }
 
+function normalizePanelWidths(widths: unknown): PanelWidths {
+  if (!Array.isArray(widths) || widths.length !== 5) {
+    return defaultPanelWidths;
+  }
+
+  const parsed = widths.map((width) => Number(width));
+
+  if (parsed.some((width) => !Number.isFinite(width) || width <= 0)) {
+    return defaultPanelWidths;
+  }
+
+  return parsed as PanelWidths;
+}
+
 function normalizeNotesByProject(
   notesByProject: Record<string, Partial<ProjectNotes>> | undefined,
   projectId: string
@@ -200,7 +217,8 @@ function normalizeState(candidate: unknown): WarRoomState | null {
     project,
     chatsByProject,
     notesByProject: normalizeNotesByProject(parsed.notesByProject, project.id),
-    openAISettings: normalizeOpenAISettings(parsed.openAISettings)
+    openAISettings: normalizeOpenAISettings(parsed.openAISettings),
+    panelWidths: normalizePanelWidths(parsed.panelWidths)
   };
 }
 
@@ -288,7 +306,8 @@ function loadStoredState(): WarRoomState {
       project: defaultProject,
       chatsByProject: { [defaultProject.id]: emptyChats },
       notesByProject: { [defaultProject.id]: emptyProjectNotes },
-      openAISettings: defaultOpenAISettings
+      openAISettings: defaultOpenAISettings,
+      panelWidths: defaultPanelWidths
     };
   }
 
@@ -310,7 +329,8 @@ function loadStoredState(): WarRoomState {
         project: defaultProject,
         chatsByProject: { [defaultProject.id]: normalizeChats(JSON.parse(legacyChats)) },
         notesByProject: { [defaultProject.id]: emptyProjectNotes },
-        openAISettings: defaultOpenAISettings
+        openAISettings: defaultOpenAISettings,
+        panelWidths: defaultPanelWidths
       };
     }
   } catch {
@@ -318,7 +338,8 @@ function loadStoredState(): WarRoomState {
       project: defaultProject,
       chatsByProject: { [defaultProject.id]: emptyChats },
       notesByProject: { [defaultProject.id]: emptyProjectNotes },
-      openAISettings: defaultOpenAISettings
+      openAISettings: defaultOpenAISettings,
+      panelWidths: defaultPanelWidths
     };
   }
 
@@ -326,7 +347,8 @@ function loadStoredState(): WarRoomState {
     project: defaultProject,
     chatsByProject: { [defaultProject.id]: emptyChats },
     notesByProject: { [defaultProject.id]: emptyProjectNotes },
-    openAISettings: defaultOpenAISettings
+    openAISettings: defaultOpenAISettings,
+    panelWidths: defaultPanelWidths
   };
 }
 
@@ -343,6 +365,7 @@ export function useWarRoomState() {
   const chats = state.chatsByProject[project.id] ?? emptyChats;
   const projectNotes = state.notesByProject[project.id] ?? emptyProjectNotes;
   const { openAISettings } = state;
+  const panelWidths = state.panelWidths;
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -539,6 +562,13 @@ export function useWarRoomState() {
     }));
   }, []);
 
+  const updatePanelWidths = useCallback((panelWidths: PanelWidths) => {
+    setState((currentState) => ({
+      ...currentState,
+      panelWidths
+    }));
+  }, []);
+
   const cancelOpenAIRequest = useCallback((chatId: Exclude<ChatId, "group">) => {
     abortControllersRef.current[chatId]?.abort();
   }, []);
@@ -695,6 +725,30 @@ export function useWarRoomState() {
     });
   }, []);
 
+  const sendCommandOutputToGroup = useCallback((output: string) => {
+    const trimmed = output.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    setState((currentState) => {
+      const currentProjectId = currentState.project.id;
+      const currentChats = currentState.chatsByProject[currentProjectId] ?? emptyChats;
+
+      return {
+        ...currentState,
+        chatsByProject: {
+          ...currentState.chatsByProject,
+          [currentProjectId]: {
+            ...currentChats,
+            group: [...currentChats.group, createMessage("group", trimmed, "PowerShell Runner")]
+          }
+        }
+      };
+    });
+  }, []);
+
   const markGroupMessage = useCallback((messageId: string, category: PlanningCategory) => {
     setState((currentState) => {
       const currentProjectId = currentState.project.id;
@@ -780,6 +834,7 @@ export function useWarRoomState() {
     project,
     projectNotes,
     openAISettings,
+    panelWidths,
     openAILaneLoading,
     groupSynthesisLoading,
     summary,
@@ -790,11 +845,13 @@ export function useWarRoomState() {
     sendToGroup,
     updateProject,
     updateOpenAISettings,
+    updatePanelWidths,
     cancelOpenAIRequest,
     synthesizeGroupPlan,
     cancelGroupSynthesis,
     updateProjectNotes,
     sendNotesToGroup,
+    sendCommandOutputToGroup,
     markGroupMessage,
     clearAllChats,
     resetCurrentProject,

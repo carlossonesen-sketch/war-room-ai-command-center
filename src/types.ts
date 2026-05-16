@@ -42,6 +42,8 @@ export interface OpenAISettings {
   useRealAi: boolean;
 }
 
+export type PanelWidths = [number, number, number, number, number];
+
 export type WarRoomChats = Record<ChatId, ChatMessage[]>;
 
 export type WarRoomSummary = Record<PlanningCategory, ChatMessage[]>;
@@ -51,4 +53,5 @@ export interface WarRoomState {
   chatsByProject: Record<string, WarRoomChats>;
   notesByProject: Record<string, ProjectNotes>;
   openAISettings: OpenAISettings;
+  panelWidths: PanelWidths;
 }

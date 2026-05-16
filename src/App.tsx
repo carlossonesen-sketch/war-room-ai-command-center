@@ -1,8 +1,10 @@
 import { BackupControls } from "./components/BackupControls";
 import { ChatPanel } from "./components/ChatPanel";
+import { CommandRunner } from "./components/CommandRunner";
 import { OpenAISettingsPanel } from "./components/OpenAISettingsPanel";
 import { ProjectNotesPanel } from "./components/ProjectNotesPanel";
 import { ProjectSelector } from "./components/ProjectSelector";
+import { ResizableWarRoomGrid } from "./components/ResizableWarRoomGrid";
 import { WarRoomSummary } from "./components/WarRoomSummary";
 import { useWarRoomState } from "./hooks/useWarRoomState";
 
@@ -14,6 +16,7 @@ function App() {
     openAISettings,
     openAILaneLoading,
     groupSynthesisLoading,
+    panelWidths,
     summary,
     fullState,
     individualChats,
@@ -22,11 +25,13 @@ function App() {
     sendToGroup,
     updateProject,
     updateOpenAISettings,
+    updatePanelWidths,
     cancelOpenAIRequest,
     synthesizeGroupPlan,
     cancelGroupSynthesis,
     updateProjectNotes,
     sendNotesToGroup,
+    sendCommandOutputToGroup,
     markGroupMessage,
     clearAllChats,
     resetCurrentProject,
@@ -35,6 +40,38 @@ function App() {
 
   const leftChats = individualChats.slice(0, 2);
   const rightChats = individualChats.slice(2);
+  const centerPanel = (
+    <div className="center-column">
+      <ChatPanel
+        chat={groupChat}
+        messages={chats.group}
+        isGroupPanel
+        isLoading={groupSynthesisLoading}
+        headerAction={
+          groupSynthesisLoading ? (
+            <button
+              className="chat-panel__header-button chat-panel__header-button--danger"
+              type="button"
+              onClick={cancelGroupSynthesis}
+            >
+              Cancel
+            </button>
+          ) : (
+            <button
+              className="chat-panel__header-button"
+              type="button"
+              onClick={synthesizeGroupPlan}
+            >
+              Synthesize Plan
+            </button>
+          )
+        }
+        onSendMessage={sendMessage}
+        onMarkGroupMessage={markGroupMessage}
+      />
+      <WarRoomSummary summary={summary} />
+    </div>
+  );
 
   return (
     <main className="app-shell">
@@ -60,63 +97,43 @@ function App() {
         onUpdateNotes={updateProjectNotes}
         onSendNotesToGroup={sendNotesToGroup}
       />
+      <CommandRunner projectPath={project.path} onSendOutputToGroup={sendCommandOutputToGroup} />
 
-      <section className="war-room-grid" aria-label="War Room chat panels">
-        {leftChats.map((chat) => (
-          <ChatPanel
-            key={chat.id}
-            chat={chat}
-            messages={chats[chat.id]}
-            isLoading={openAILaneLoading[chat.id]}
-            onSendMessage={sendMessage}
-            onCancelRequest={cancelOpenAIRequest}
-            onSendToGroup={sendToGroup}
-          />
-        ))}
-
-        <div className="center-column">
-          <ChatPanel
-            chat={groupChat}
-            messages={chats.group}
-            isGroupPanel
-            isLoading={groupSynthesisLoading}
-            headerAction={
-              groupSynthesisLoading ? (
-                <button
-                  className="chat-panel__header-button chat-panel__header-button--danger"
-                  type="button"
-                  onClick={cancelGroupSynthesis}
-                >
-                  Cancel
-                </button>
-              ) : (
-                <button
-                  className="chat-panel__header-button"
-                  type="button"
-                  onClick={synthesizeGroupPlan}
-                >
-                  Synthesize Plan
-                </button>
-              )
-            }
-            onSendMessage={sendMessage}
-            onMarkGroupMessage={markGroupMessage}
-          />
-          <WarRoomSummary summary={summary} />
-        </div>
-
-        {rightChats.map((chat) => (
-          <ChatPanel
-            key={chat.id}
-            chat={chat}
-            messages={chats[chat.id]}
-            isLoading={openAILaneLoading[chat.id]}
-            onSendMessage={sendMessage}
-            onCancelRequest={cancelOpenAIRequest}
-            onSendToGroup={sendToGroup}
-          />
-        ))}
-      </section>
+      <ResizableWarRoomGrid widths={panelWidths} onChangeWidths={updatePanelWidths}>
+        <ChatPanel
+          chat={leftChats[0]}
+          messages={chats[leftChats[0].id]}
+          isLoading={openAILaneLoading[leftChats[0].id]}
+          onSendMessage={sendMessage}
+          onCancelRequest={cancelOpenAIRequest}
+          onSendToGroup={sendToGroup}
+        />
+        <ChatPanel
+          chat={leftChats[1]}
+          messages={chats[leftChats[1].id]}
+          isLoading={openAILaneLoading[leftChats[1].id]}
+          onSendMessage={sendMessage}
+          onCancelRequest={cancelOpenAIRequest}
+          onSendToGroup={sendToGroup}
+        />
+        {centerPanel}
+        <ChatPanel
+          chat={rightChats[0]}
+          messages={chats[rightChats[0].id]}
+          isLoading={openAILaneLoading[rightChats[0].id]}
+          onSendMessage={sendMessage}
+          onCancelRequest={cancelOpenAIRequest}
+          onSendToGroup={sendToGroup}
+        />
+        <ChatPanel
+          chat={rightChats[1]}
+          messages={chats[rightChats[1].id]}
+          isLoading={openAILaneLoading[rightChats[1].id]}
+          onSendMessage={sendMessage}
+          onCancelRequest={cancelOpenAIRequest}
+          onSendToGroup={sendToGroup}
+        />
+      </ResizableWarRoomGrid>
     </main>
   );
 }
