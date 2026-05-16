@@ -645,6 +645,140 @@ button {
   line-height: 1.42;
 }
 
+.agents-drawer {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(17, 23, 34, 0.64);
+  padding: 12px;
+}
+
+.agents-drawer header h2 {
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 0.98rem;
+}
+
+.agents-drawer header p,
+.agents-drawer__safety {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.agents-drawer__safety {
+  color: #ffe7a3;
+}
+
+.agents-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.agent-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 10px;
+}
+
+.agent-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.agent-card h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.94rem;
+}
+
+.agent-card p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.agent-card__status {
+  border: 1px solid rgba(160, 178, 210, 0.2);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 3px 7px;
+  font-size: 0.66rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.agent-card__status--local_mock {
+  border-color: rgba(92, 200, 167, 0.32);
+  color: #9ff0d4;
+}
+
+.agent-card__capabilities,
+.agent-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.agent-card__capabilities span {
+  border: 1px solid rgba(142, 223, 255, 0.2);
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: rgba(142, 223, 255, 0.06);
+  padding: 4px 7px;
+  font-size: 0.68rem;
+}
+
+.agent-card__fields {
+  display: grid;
+  gap: 7px;
+}
+
+.agent-card label {
+  display: grid;
+  gap: 5px;
+}
+
+.agent-card label span {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.agent-card input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(5, 8, 13, 0.6);
+  padding: 8px;
+  font-size: 0.74rem;
+}
+
+.agent-card button {
+  border: 1px solid rgba(160, 178, 210, 0.16);
+  border-radius: 8px;
+  color: rgba(238, 243, 255, 0.42);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 7px 8px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: not-allowed;
+}
+
 .war-room-grid {
   display: grid;
   gap: 0;
@@ -1495,6 +1629,10 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .agents-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .center-column {
     grid-column: 1 / -1;
     min-height: 620px;
@@ -1571,6 +1709,10 @@ button {
   }
 
   .command-runner__streams {
+    grid-template-columns: 1fr;
+  }
+
+  .agents-grid {
     grid-template-columns: 1fr;
   }
 

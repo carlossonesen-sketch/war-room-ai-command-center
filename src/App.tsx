@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AgentsDrawer } from "./components/AgentsDrawer";
 import { BackupControls } from "./components/BackupControls";
 import { ChatPanel } from "./components/ChatPanel";
 import { CommandRunner } from "./components/CommandRunner";
@@ -10,13 +11,14 @@ import { ResizableWarRoomGrid } from "./components/ResizableWarRoomGrid";
 import { WarRoomSummary } from "./components/WarRoomSummary";
 import { useWarRoomState } from "./hooks/useWarRoomState";
 
-type DrawerId = "project" | "notes" | "ai" | "runner" | "backups";
+type DrawerId = "project" | "notes" | "agents" | "ai" | "runner" | "backups";
 
 const DRAWER_STORAGE_KEY = "war-room:active-drawer";
 
 const drawerButtons: Array<{ id: DrawerId; label: string }> = [
   { id: "project", label: "Project" },
   { id: "notes", label: "Notes" },
+  { id: "agents", label: "Agents" },
   { id: "ai", label: "AI Settings" },
   { id: "runner", label: "Command Runner" },
   { id: "backups", label: "Backups" }
@@ -40,6 +42,7 @@ function App() {
     summary,
     fullState,
     individualChats,
+    agentDefinitions,
     groupChat,
     sendMessage,
     sendToGroup,
@@ -173,6 +176,8 @@ function App() {
                 onUpdateSettings={updateOpenAISettings}
               />
             )}
+
+            {activeDrawer === "agents" && <AgentsDrawer agents={agentDefinitions} />}
 
             {activeDrawer === "runner" && (
               <CommandRunner

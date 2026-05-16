@@ -1,5 +1,19 @@
 export type ChatId = "desktop" | "cursor" | "business" | "reviewer" | "group";
 
+export type AgentId = "hien" | "carlos" | "besi" | "fido";
+
+export type AgentConnectionStatus = "disconnected" | "local_mock" | "connected" | "error";
+
+export type AgentCapability =
+  | "chat"
+  | "index_computer"
+  | "inspect_project_files"
+  | "run_project_command"
+  | "generate_cursor_prompt"
+  | "review_code"
+  | "budget_plan"
+  | "marketing_plan";
+
 export type MessageRole = "user" | "assistant" | "group";
 
 export type MessageMode = "direct" | "war-room";
@@ -22,6 +36,17 @@ export interface ChatDefinition {
   id: ChatId;
   title: string;
   tagline: string;
+}
+
+export interface AgentDefinition {
+  id: AgentId;
+  chatId: Exclude<ChatId, "group">;
+  codeName: string;
+  role: string;
+  connectionStatus: AgentConnectionStatus;
+  capabilities: AgentCapability[];
+  endpoint: string;
+  localPath: string;
 }
 
 export interface ProjectContext {

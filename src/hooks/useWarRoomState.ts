@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
+  AgentDefinition,
   ChatDefinition,
   ChatId,
   ChatMessage,
@@ -21,23 +22,66 @@ const LEGACY_CHATS_KEY = "war-room:chats";
 export const individualChats: Array<ChatDefinition & { id: Exclude<ChatId, "group"> }> = [
   {
     id: "desktop",
-    title: "Desktop Companion",
-    tagline: "Context, reminders, and operating support"
+    title: "Hien",
+    tagline: "Desktop Companion / project memory / computer indexing / personal assistant"
   },
   {
     id: "cursor",
-    title: "Cursor-Like Builder",
-    tagline: "Implementation partner for product work"
+    title: "Carlos",
+    tagline: "Cursor-like builder / code runner / project file inspector"
   },
   {
     id: "business",
-    title: "Product / Business Strategist",
-    tagline: "Strategy, sequencing, and growth bets"
+    title: "Besi",
+    tagline: "Budgeting, marketing, business planning, monetization"
   },
   {
     id: "reviewer",
-    title: "Code Reviewer / Risk Checker",
-    tagline: "Risk checks and technical critique"
+    title: "Fido",
+    tagline: "Code reviewer, bug checker, risk watchdog"
+  }
+];
+
+export const agentDefinitions: AgentDefinition[] = [
+  {
+    id: "hien",
+    chatId: "desktop",
+    codeName: "Hien",
+    role: "Desktop Companion / project memory / computer indexing / personal assistant",
+    connectionStatus: "local_mock",
+    capabilities: ["chat", "index_computer"],
+    endpoint: "",
+    localPath: ""
+  },
+  {
+    id: "carlos",
+    chatId: "cursor",
+    codeName: "Carlos",
+    role: "Cursor-like builder / code runner / project file inspector",
+    connectionStatus: "local_mock",
+    capabilities: ["chat", "inspect_project_files", "run_project_command", "generate_cursor_prompt"],
+    endpoint: "",
+    localPath: ""
+  },
+  {
+    id: "besi",
+    chatId: "business",
+    codeName: "Besi",
+    role: "Budgeting, marketing, business planning, monetization",
+    connectionStatus: "local_mock",
+    capabilities: ["chat", "budget_plan", "marketing_plan"],
+    endpoint: "",
+    localPath: ""
+  },
+  {
+    id: "fido",
+    chatId: "reviewer",
+    codeName: "Fido",
+    role: "Code reviewer, bug checker, risk watchdog",
+    connectionStatus: "local_mock",
+    capabilities: ["chat", "review_code", "inspect_project_files"],
+    endpoint: "",
+    localPath: ""
   }
 ];
 
@@ -94,24 +138,24 @@ const idleOpenAILanes: Record<Exclude<ChatId, "group">, boolean> = {
 
 const laneSystemPrompts: Record<Exclude<ChatId, "group">, string> = {
   desktop:
-    "You are Desktop Companion. In direct chat, act as a personal project companion for momentum, memory-style guidance, priorities, and calm motivation.",
+    "You are Hien, the Desktop Companion. In direct chat, act as a personal project companion for momentum, project memory, computer indexing strategy, and calm personal-assistant guidance.",
   cursor:
-    "You are Cursor-Like Builder. In direct chat, focus on implementation planning, commands, code workflow, build steps, and practical execution.",
+    "You are Carlos, the Cursor-like builder. In direct chat, focus on implementation planning, commands, code workflow, project file inspection strategy, build steps, and practical execution.",
   business:
-    "You are Product / Business Strategist. In direct chat, focus on monetization, product direction, portfolio value, hiring angle, and business strategy.",
+    "You are Besi, the business planning advisor. In direct chat, focus on budgeting, marketing, business planning, monetization, product direction, portfolio value, and hiring angle.",
   reviewer:
-    "You are Code Reviewer / Risk Checker. In direct chat, focus on bugs, architecture, security, testing, regressions, and quality risks."
+    "You are Fido, the code reviewer and risk watchdog. In direct chat, focus on bugs, architecture, security, testing, regressions, and quality risks."
 };
 
 const warRoomAdvisorPrompts: Record<Exclude<ChatId, "group">, string> = {
   desktop:
-    "You are Desktop Companion responding as a War Room advisor. Use the group context to identify priorities, motivation, and big-picture direction. Be concise and action-oriented.",
+    "You are Hien responding as a War Room advisor. Use the group context to identify priorities, motivation, project memory, and big-picture direction. Be concise and action-oriented.",
   cursor:
-    "You are Cursor-Like Builder responding as a War Room advisor. Use the group context to identify files to edit, build steps, verification, and strong Cursor/Codex prompts.",
+    "You are Carlos responding as a War Room advisor. Use the group context to identify files to edit, build steps, verification, project inspection needs, and strong Cursor/Codex prompts.",
   business:
-    "You are Product / Business Strategist responding as a War Room advisor. Use the group context to assess market value, user value, roadmap, portfolio/hiring angle, and business risk.",
+    "You are Besi responding as a War Room advisor. Use the group context to assess budgeting, marketing, monetization, market value, user value, roadmap, portfolio/hiring angle, and business risk.",
   reviewer:
-    "You are Code Reviewer / Risk Checker responding as a War Room advisor. Use the group context to identify edge cases, regressions, failure points, security concerns, and test plan."
+    "You are Fido responding as a War Room advisor. Use the group context to identify edge cases, regressions, failure points, security concerns, architecture risk, and test plan."
 };
 
 const synthesizerSystemPrompt =
@@ -146,10 +190,10 @@ function getMockResponse(chatTitle: string, userText: string): string {
 function getWarRoomMockResponse(chatId: Exclude<ChatId, "group">, latestGroupMessage: string) {
   const context = latestGroupMessage.trim() || "the current War Room context";
   const responses: Record<Exclude<ChatId, "group">, string> = {
-    desktop: `War Room Response: the priority is to keep momentum around "${context}". Pick the next visible win, reduce noise, and keep the project moving.`,
-    cursor: `War Room Response: based on "${context}", identify the smallest file changes, run the build, then produce a focused Cursor prompt for the next implementation pass.`,
-    business: `War Room Response: "${context}" should be framed around user value, portfolio signal, and launch risk. Clarify the target outcome before expanding scope.`,
-    reviewer: `War Room Response: "${context}" needs regression checks, edge-case review, and a verification plan before it is treated as done.`
+    desktop: `Hien War Room Response: keep momentum around "${context}". Capture the memory, choose the next visible win, reduce noise, and keep the project moving.`,
+    cursor: `Carlos War Room Response: based on "${context}", identify the smallest file changes, run the build check, and produce a focused Cursor prompt for the next implementation pass.`,
+    business: `Besi War Room Response: "${context}" should be framed around budget, market value, portfolio signal, monetization, and launch risk before expanding scope.`,
+    reviewer: `Fido War Room Response: "${context}" needs regression checks, edge-case review, risk review, and a verification plan before it is treated as done.`
   };
 
   return responses[chatId];
@@ -1136,6 +1180,7 @@ export function useWarRoomState() {
     summary,
     fullState: state,
     individualChats,
+    agentDefinitions,
     groupChat,
     sendMessage,
     sendToGroup,

@@ -10,10 +10,17 @@ const planningActions: Array<{ category: PlanningCategory; label: string }> = [
 ];
 
 const groupSourceClasses: Record<string, string> = {
+  Hien: "desktop",
+  Carlos: "cursor",
+  Besi: "business",
+  Fido: "reviewer",
   "Desktop Companion": "desktop",
   "Cursor Builder": "cursor",
+  "Cursor-Like Builder": "cursor",
   "Business Planner": "business",
+  "Product / Business Strategist": "business",
   "Code Reviewer": "reviewer",
+  "Code Reviewer / Risk Checker": "reviewer",
   "Project Notes": "notes",
   "War Room Synthesizer": "synthesizer",
   "PowerShell Runner": "runner",
