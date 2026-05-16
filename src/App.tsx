@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { BackupControls } from "./components/BackupControls";
 import { ChatPanel } from "./components/ChatPanel";
 import { CommandRunner } from "./components/CommandRunner";
@@ -8,7 +9,23 @@ import { ResizableWarRoomGrid } from "./components/ResizableWarRoomGrid";
 import { WarRoomSummary } from "./components/WarRoomSummary";
 import { useWarRoomState } from "./hooks/useWarRoomState";
 
+type DrawerId = "project" | "notes" | "ai" | "runner" | "backups";
+
+const DRAWER_STORAGE_KEY = "war-room:active-drawer";
+
+const drawerButtons: Array<{ id: DrawerId; label: string }> = [
+  { id: "project", label: "Project" },
+  { id: "notes", label: "Notes" },
+  { id: "ai", label: "AI Settings" },
+  { id: "runner", label: "Command Runner" },
+  { id: "backups", label: "Backups" }
+];
+
 function App() {
+  const [activeDrawer, setActiveDrawer] = useState<DrawerId | null>(() => {
+    const stored = window.localStorage.getItem(DRAWER_STORAGE_KEY);
+    return drawerButtons.some((drawer) => drawer.id === stored) ? (stored as DrawerId) : null;
+  });
   const {
     chats,
     project,
@@ -37,6 +54,15 @@ function App() {
     resetCurrentProject,
     replaceWarRoomState
   } = useWarRoomState();
+
+  useEffect(() => {
+    if (activeDrawer) {
+      window.localStorage.setItem(DRAWER_STORAGE_KEY, activeDrawer);
+      return;
+    }
+
+    window.localStorage.removeItem(DRAWER_STORAGE_KEY);
+  }, [activeDrawer]);
 
   const leftChats = individualChats.slice(0, 2);
   const rightChats = individualChats.slice(2);
@@ -85,20 +111,61 @@ function App() {
         </button>
       </header>
 
-      <section className="workspace-controls" aria-label="War Room project controls">
-        <ProjectSelector project={project} onUpdateProject={updateProject} />
-        <BackupControls
-          state={fullState}
-          onImportState={replaceWarRoomState}
-          onResetCurrentProject={resetCurrentProject}
-        />
-        <OpenAISettingsPanel settings={openAISettings} onUpdateSettings={updateOpenAISettings} />
-        <ProjectNotesPanel
-          notes={projectNotes}
-          onUpdateNotes={updateProjectNotes}
-          onSendNotesToGroup={sendNotesToGroup}
-        />
-        <CommandRunner projectPath={project.path} onSendOutputToGroup={sendCommandOutputToGroup} />
+      <section className="toolbar-shell" aria-label="War Room tools">
+        <nav className="top-toolbar" aria-label="War Room drawers">
+          {drawerButtons.map((drawer) => (
+            <button
+              key={drawer.id}
+              type="button"
+              className={activeDrawer === drawer.id ? "is-active" : ""}
+              onClick={() =>
+                setActiveDrawer((currentDrawer) =>
+                  currentDrawer === drawer.id ? null : drawer.id
+                )
+              }
+            >
+              {drawer.label}
+            </button>
+          ))}
+        </nav>
+
+        {activeDrawer && (
+          <section className="workspace-drawer" aria-label={`${activeDrawer} drawer`}>
+            {activeDrawer === "project" && (
+              <ProjectSelector project={project} onUpdateProject={updateProject} />
+            )}
+
+            {activeDrawer === "notes" && (
+              <ProjectNotesPanel
+                notes={projectNotes}
+                onUpdateNotes={updateProjectNotes}
+                onSendNotesToGroup={sendNotesToGroup}
+              />
+            )}
+
+            {activeDrawer === "ai" && (
+              <OpenAISettingsPanel
+                settings={openAISettings}
+                onUpdateSettings={updateOpenAISettings}
+              />
+            )}
+
+            {activeDrawer === "runner" && (
+              <CommandRunner
+                projectPath={project.path}
+                onSendOutputToGroup={sendCommandOutputToGroup}
+              />
+            )}
+
+            {activeDrawer === "backups" && (
+              <BackupControls
+                state={fullState}
+                onImportState={replaceWarRoomState}
+                onResetCurrentProject={resetCurrentProject}
+              />
+            )}
+          </section>
+        )}
       </section>
 
       <ResizableWarRoomGrid widths={panelWidths} onChangeWidths={updatePanelWidths}>

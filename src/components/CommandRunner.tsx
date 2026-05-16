@@ -31,7 +31,7 @@ function formatOutput(command: string, result: PowerShellResult) {
 }
 
 export function CommandRunner({ projectPath, onSendOutputToGroup }: CommandRunnerProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const [command, setCommand] = useState("");
   const [result, setResult] = useState<PowerShellResult | null>(null);
   const [error, setError] = useState("");

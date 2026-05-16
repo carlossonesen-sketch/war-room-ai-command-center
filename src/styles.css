@@ -83,6 +83,48 @@ button {
   padding-right: 4px;
 }
 
+.toolbar-shell {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.top-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(17, 23, 34, 0.68);
+  padding: 8px;
+}
+
+.top-toolbar button {
+  border: 1px solid rgba(142, 223, 255, 0.2);
+  border-radius: 10px;
+  color: var(--muted);
+  background: rgba(142, 223, 255, 0.05);
+  padding: 8px 11px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.top-toolbar button:hover,
+.top-toolbar button.is-active {
+  border-color: rgba(92, 200, 167, 0.42);
+  color: #06100d;
+  background: var(--accent);
+}
+
+.workspace-drawer {
+  max-height: 30vh;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .app-header__eyebrow {
   margin: 0 0 4px;
   color: var(--accent);
@@ -1195,7 +1237,8 @@ button {
     overflow-y: auto;
   }
 
-  .workspace-controls {
+  .workspace-controls,
+  .workspace-drawer {
     max-height: none;
     overflow: visible;
   }
