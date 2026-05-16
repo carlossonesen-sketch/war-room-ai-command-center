@@ -85,19 +85,21 @@ function App() {
         </button>
       </header>
 
-      <ProjectSelector project={project} onUpdateProject={updateProject} />
-      <BackupControls
-        state={fullState}
-        onImportState={replaceWarRoomState}
-        onResetCurrentProject={resetCurrentProject}
-      />
-      <OpenAISettingsPanel settings={openAISettings} onUpdateSettings={updateOpenAISettings} />
-      <ProjectNotesPanel
-        notes={projectNotes}
-        onUpdateNotes={updateProjectNotes}
-        onSendNotesToGroup={sendNotesToGroup}
-      />
-      <CommandRunner projectPath={project.path} onSendOutputToGroup={sendCommandOutputToGroup} />
+      <section className="workspace-controls" aria-label="War Room project controls">
+        <ProjectSelector project={project} onUpdateProject={updateProject} />
+        <BackupControls
+          state={fullState}
+          onImportState={replaceWarRoomState}
+          onResetCurrentProject={resetCurrentProject}
+        />
+        <OpenAISettingsPanel settings={openAISettings} onUpdateSettings={updateOpenAISettings} />
+        <ProjectNotesPanel
+          notes={projectNotes}
+          onUpdateNotes={updateProjectNotes}
+          onSendNotesToGroup={sendNotesToGroup}
+        />
+        <CommandRunner projectPath={project.path} onSendOutputToGroup={sendCommandOutputToGroup} />
+      </section>
 
       <ResizableWarRoomGrid widths={panelWidths} onChangeWidths={updatePanelWidths}>
         <ChatPanel
