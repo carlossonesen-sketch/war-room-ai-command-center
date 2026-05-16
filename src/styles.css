@@ -812,6 +812,28 @@ button {
   font-size: 0.78rem;
 }
 
+.chat-panel__lane-action {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--border);
+  padding: 9px 12px;
+}
+
+.chat-panel__advisor-button {
+  width: 100%;
+  border: 1px solid rgba(142, 223, 255, 0.24);
+  border-radius: 10px;
+  color: var(--accent-strong);
+  background: rgba(142, 223, 255, 0.07);
+  padding: 8px 10px;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.chat-panel__advisor-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 .chat-panel__messages {
   display: flex;
   flex: 1;
@@ -967,6 +989,27 @@ button {
   font-size: 0.68rem;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.message__mode {
+  display: inline-block;
+  margin: 0 0 7px 6px;
+  border: 1px solid rgba(160, 178, 210, 0.2);
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.message__mode--direct {
+  color: #c5cfdd;
+  background: rgba(160, 178, 210, 0.08);
+}
+
+.message__mode--war-room {
+  border-color: rgba(92, 200, 167, 0.36);
+  color: #9ff0d4;
+  background: rgba(92, 200, 167, 0.08);
 }
 
 .message__category--task {

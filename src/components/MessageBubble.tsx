@@ -68,6 +68,11 @@ export function MessageBubble({
           {message.category}
         </span>
       )}
+      {!isGroupPanel && message.mode && (
+        <span className={`message__mode message__mode--${message.mode}`}>
+          {message.mode === "war-room" ? "War Room Response" : "Direct Chat"}
+        </span>
+      )}
       <MarkdownMessage text={message.text} />
       <div className="message__meta">
         <span>{timestamp}</span>

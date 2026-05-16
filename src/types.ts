@@ -2,6 +2,8 @@ export type ChatId = "desktop" | "cursor" | "business" | "reviewer" | "group";
 
 export type MessageRole = "user" | "assistant" | "group";
 
+export type MessageMode = "direct" | "war-room";
+
 export type ProjectStatus = "Idea" | "Building" | "Testing" | "Launched";
 
 export type PlanningCategory = "task" | "decision" | "bug" | "idea";
@@ -13,6 +15,7 @@ export interface ChatMessage {
   createdAt: string;
   source?: string;
   category?: PlanningCategory;
+  mode?: MessageMode;
 }
 
 export interface ChatDefinition {

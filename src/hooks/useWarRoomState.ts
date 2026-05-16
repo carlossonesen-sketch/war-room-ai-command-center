@@ -4,6 +4,7 @@ import type {
   ChatId,
   ChatMessage,
   GeneratedPrompt,
+  MessageMode,
   OpenAISettings,
   PanelWidths,
   PlanningCategory,
@@ -25,17 +26,17 @@ export const individualChats: Array<ChatDefinition & { id: Exclude<ChatId, "grou
   },
   {
     id: "cursor",
-    title: "Cursor Builder",
+    title: "Cursor-Like Builder",
     tagline: "Implementation partner for product work"
   },
   {
     id: "business",
-    title: "Business Planner",
+    title: "Product / Business Strategist",
     tagline: "Strategy, sequencing, and growth bets"
   },
   {
     id: "reviewer",
-    title: "Code Reviewer",
+    title: "Code Reviewer / Risk Checker",
     tagline: "Risk checks and technical critique"
   }
 ];
@@ -93,24 +94,41 @@ const idleOpenAILanes: Record<Exclude<ChatId, "group">, boolean> = {
 
 const laneSystemPrompts: Record<Exclude<ChatId, "group">, string> = {
   desktop:
-    "You are Desktop Companion, a project-aware assistant. Be concise, practical, and motivational. Help the user keep momentum and clarity.",
+    "You are Desktop Companion. In direct chat, act as a personal project companion for momentum, memory-style guidance, priorities, and calm motivation.",
   cursor:
-    "You are Cursor Builder, a code and build planner. Give practical, step-by-step implementation guidance with clear next actions.",
+    "You are Cursor-Like Builder. In direct chat, focus on implementation planning, commands, code workflow, build steps, and practical execution.",
   business:
-    "You are Business Planner, a product and business strategy assistant. Focus on positioning, customer value, risks, sequencing, and leverage.",
+    "You are Product / Business Strategist. In direct chat, focus on monetization, product direction, portfolio value, hiring angle, and business strategy.",
   reviewer:
-    "You are Code Reviewer, a bug finder and quality checker. Look for correctness, edge cases, maintainability, and missing verification."
+    "You are Code Reviewer / Risk Checker. In direct chat, focus on bugs, architecture, security, testing, regressions, and quality risks."
+};
+
+const warRoomAdvisorPrompts: Record<Exclude<ChatId, "group">, string> = {
+  desktop:
+    "You are Desktop Companion responding as a War Room advisor. Use the group context to identify priorities, motivation, and big-picture direction. Be concise and action-oriented.",
+  cursor:
+    "You are Cursor-Like Builder responding as a War Room advisor. Use the group context to identify files to edit, build steps, verification, and strong Cursor/Codex prompts.",
+  business:
+    "You are Product / Business Strategist responding as a War Room advisor. Use the group context to assess market value, user value, roadmap, portfolio/hiring angle, and business risk.",
+  reviewer:
+    "You are Code Reviewer / Risk Checker responding as a War Room advisor. Use the group context to identify edge cases, regressions, failure points, security concerns, and test plan."
 };
 
 const synthesizerSystemPrompt =
   "You are the War Room Synthesizer. Combine the individual AI viewpoints into a clear project plan. Be concise, practical, and action-oriented. Return:\n1. Current Goal\n2. Decisions Made\n3. Next 3 Tasks\n4. Risks / Blockers\n5. Best Next Cursor Prompt";
 
-function createMessage(role: ChatMessage["role"], text: string, source?: string): ChatMessage {
+function createMessage(
+  role: ChatMessage["role"],
+  text: string,
+  source?: string,
+  mode?: MessageMode
+): ChatMessage {
   return {
     id: crypto.randomUUID(),
     role,
     text,
     source,
+    mode,
     createdAt: new Date().toISOString()
   };
 }
@@ -123,6 +141,18 @@ function getMockResponse(chatTitle: string, userText: string): string {
   }
 
   return `${chatTitle}: noted. I will treat "${trimmed}" as the next working thread for this MVP.`;
+}
+
+function getWarRoomMockResponse(chatId: Exclude<ChatId, "group">, latestGroupMessage: string) {
+  const context = latestGroupMessage.trim() || "the current War Room context";
+  const responses: Record<Exclude<ChatId, "group">, string> = {
+    desktop: `War Room Response: the priority is to keep momentum around "${context}". Pick the next visible win, reduce noise, and keep the project moving.`,
+    cursor: `War Room Response: based on "${context}", identify the smallest file changes, run the build, then produce a focused Cursor prompt for the next implementation pass.`,
+    business: `War Room Response: "${context}" should be framed around user value, portfolio signal, and launch risk. Clarify the target outcome before expanding scope.`,
+    reviewer: `War Room Response: "${context}" needs regression checks, edge-case review, and a verification plan before it is treated as done.`
+  };
+
+  return responses[chatId];
 }
 
 function normalizeChats(chats: Partial<WarRoomChats> | undefined): WarRoomChats {
@@ -253,6 +283,22 @@ function buildProjectContext(project: ProjectContext, notes: ProjectNotes) {
   ].join("\n");
 }
 
+function formatSummaryContext(summary: WarRoomSummary) {
+  const formatSection = (title: string, messages: ChatMessage[]) => {
+    const lines = messages.map(
+      (message) => `- ${message.source ? `[${message.source}] ` : ""}${message.text}`
+    );
+    return `${title}:\n${lines.length ? lines.join("\n") : "- None marked"}`;
+  };
+
+  return [
+    formatSection("Tasks", summary.task),
+    formatSection("Decisions", summary.decision),
+    formatSection("Bugs", summary.bug),
+    formatSection("Ideas", summary.idea)
+  ].join("\n\n");
+}
+
 async function requestChatCompletion(args: {
   settings: OpenAISettings;
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
@@ -313,6 +359,36 @@ async function requestOpenAIResponse(args: {
       ...args.messages.slice(-12).map((message) => ({
         role: (message.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
         content: message.text
+      }))
+    ]
+  });
+}
+
+async function requestWarRoomAdvisorResponse(args: {
+  settings: OpenAISettings;
+  chatId: Exclude<ChatId, "group">;
+  project: ProjectContext;
+  notes: ProjectNotes;
+  groupMessages: ChatMessage[];
+  summary: WarRoomSummary;
+  signal: AbortSignal;
+}) {
+  return requestChatCompletion({
+    settings: args.settings,
+    signal: args.signal,
+    messages: [
+      { role: "system", content: warRoomAdvisorPrompts[args.chatId] },
+      {
+        role: "system",
+        content: `Selected project context:\n${buildProjectContext(args.project, args.notes)}`
+      },
+      {
+        role: "system",
+        content: `War Room Summary:\n${formatSummaryContext(args.summary)}`
+      },
+      ...args.groupMessages.slice(-16).map((message) => ({
+        role: (message.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
+        content: `${message.source ? `[${message.source}] ` : ""}${message.text}`
       }))
     ]
   });
@@ -412,7 +488,7 @@ export function useWarRoomState() {
         return;
       }
 
-      const userMessage = createMessage("user", trimmed);
+      const userMessage = createMessage("user", trimmed, undefined, "direct");
       const isIndividualChat = chatId !== "group";
       const shouldUseOpenAI =
         isIndividualChat && openAISettings.useRealAi && Boolean(openAISettings.apiKey.trim());
@@ -446,7 +522,9 @@ export function useWarRoomState() {
         if (chatId === "group") {
           const groupResponse = createMessage(
             "assistant",
-            "Group War Room: captured. I will keep this in the shared operating picture."
+            "Group War Room: captured. I will keep this in the shared operating picture.",
+            undefined,
+            "direct"
           );
 
           return {
@@ -473,7 +551,12 @@ export function useWarRoomState() {
           };
         }
 
-        const assistantMessage = createMessage("assistant", getMockResponse(chatTitle, trimmed));
+        const assistantMessage = createMessage(
+          "assistant",
+          getMockResponse(chatTitle, trimmed),
+          undefined,
+          "direct"
+        );
 
         return {
           ...currentState,
@@ -497,7 +580,7 @@ export function useWarRoomState() {
           setState((currentState) => {
             const currentProjectId = currentState.project.id;
             const currentChats = currentState.chatsByProject[currentProjectId] ?? emptyChats;
-            const assistantMessage = createMessage("assistant", responseText);
+            const assistantMessage = createMessage("assistant", responseText, undefined, "direct");
 
             return {
               ...currentState,
@@ -521,7 +604,12 @@ export function useWarRoomState() {
           setState((currentState) => {
             const currentProjectId = currentState.project.id;
             const currentChats = currentState.chatsByProject[currentProjectId] ?? emptyChats;
-            const errorMessage = createMessage("assistant", `OpenAI error: ${message}`);
+            const errorMessage = createMessage(
+              "assistant",
+              `OpenAI error: ${message}`,
+              undefined,
+              "direct"
+            );
 
             return {
               ...currentState,
@@ -904,6 +992,138 @@ export function useWarRoomState() {
     );
   }, [chats.group]);
 
+  const askAdvisorAboutGroup = useCallback(
+    async (chatId: Exclude<ChatId, "group">) => {
+      const currentGroupMessages = chats.group;
+      const latestGroupMessage = currentGroupMessages[currentGroupMessages.length - 1]?.text ?? "";
+      const contextMessage = createMessage(
+        "user",
+        "Review the current Group War Room context and respond as this lane's War Room advisor.",
+        "Group War Room",
+        "war-room"
+      );
+      const shouldUseOpenAI = openAISettings.useRealAi && Boolean(openAISettings.apiKey.trim());
+      const controller = shouldUseOpenAI ? new AbortController() : null;
+
+      if (controller) {
+        abortControllersRef.current[chatId]?.abort();
+        abortControllersRef.current[chatId] = controller;
+      }
+
+      setState((currentState) => {
+        const currentProjectId = currentState.project.id;
+        const currentChats = currentState.chatsByProject[currentProjectId] ?? emptyChats;
+
+        return {
+          ...currentState,
+          chatsByProject: {
+            ...currentState.chatsByProject,
+            [currentProjectId]: {
+              ...currentChats,
+              [chatId]: [...currentChats[chatId], contextMessage]
+            }
+          }
+        };
+      });
+
+      if (!shouldUseOpenAI || !controller) {
+        const mockResponse = createMessage(
+          "assistant",
+          getWarRoomMockResponse(chatId, latestGroupMessage),
+          undefined,
+          "war-room"
+        );
+
+        setState((currentState) => {
+          const currentProjectId = currentState.project.id;
+          const currentChats = currentState.chatsByProject[currentProjectId] ?? emptyChats;
+
+          return {
+            ...currentState,
+            chatsByProject: {
+              ...currentState.chatsByProject,
+              [currentProjectId]: {
+                ...currentChats,
+                [chatId]: [...currentChats[chatId], mockResponse]
+              }
+            }
+          };
+        });
+        return;
+      }
+
+      setOpenAILaneLoading((current) => ({ ...current, [chatId]: true }));
+
+      try {
+        const responseText = await requestWarRoomAdvisorResponse({
+          settings: openAISettings,
+          chatId,
+          project,
+          notes: projectNotes,
+          groupMessages: currentGroupMessages,
+          summary,
+          signal: controller.signal
+        });
+        const responseMessage = createMessage("assistant", responseText, undefined, "war-room");
+
+        setState((currentState) => {
+          const currentProjectId = currentState.project.id;
+          const currentChats = currentState.chatsByProject[currentProjectId] ?? emptyChats;
+
+          return {
+            ...currentState,
+            chatsByProject: {
+              ...currentState.chatsByProject,
+              [currentProjectId]: {
+                ...currentChats,
+                [chatId]: [...currentChats[chatId], responseMessage]
+              }
+            }
+          };
+        });
+      } catch (error) {
+        const isAbortError = error instanceof DOMException && error.name === "AbortError";
+        const message = isAbortError
+          ? "War Room advisor request canceled."
+          : error instanceof Error
+            ? error.message
+            : "War Room advisor request failed.";
+        const errorMessage = createMessage(
+          "assistant",
+          `OpenAI error: ${message}`,
+          undefined,
+          "war-room"
+        );
+
+        setState((currentState) => {
+          const currentProjectId = currentState.project.id;
+          const currentChats = currentState.chatsByProject[currentProjectId] ?? emptyChats;
+
+          return {
+            ...currentState,
+            chatsByProject: {
+              ...currentState.chatsByProject,
+              [currentProjectId]: {
+                ...currentChats,
+                [chatId]: [...currentChats[chatId], errorMessage]
+              }
+            }
+          };
+        });
+      } finally {
+        abortControllersRef.current[chatId] = undefined;
+        setOpenAILaneLoading((current) => ({ ...current, [chatId]: false }));
+      }
+    },
+    [chats.group, openAISettings, project, projectNotes, summary]
+  );
+
+  const askAllAdvisorsAboutGroup = useCallback(() => {
+    individualChatIds.forEach((chatId) => {
+      void askAdvisorAboutGroup(chatId);
+    });
+  }, [askAdvisorAboutGroup]);
+
   return {
     chats,
     project,
@@ -919,6 +1139,8 @@ export function useWarRoomState() {
     groupChat,
     sendMessage,
     sendToGroup,
+    askAdvisorAboutGroup,
+    askAllAdvisorsAboutGroup,
     updateProject,
     updateOpenAISettings,
     updatePanelWidths,

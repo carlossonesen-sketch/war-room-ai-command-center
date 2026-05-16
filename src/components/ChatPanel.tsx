@@ -8,6 +8,7 @@ interface ChatPanelProps {
   isGroupPanel?: boolean;
   isLoading?: boolean;
   headerAction?: React.ReactNode;
+  laneAction?: React.ReactNode;
   onSendMessage: (chatId: ChatId, text: string) => void | Promise<void>;
   onCancelRequest?: (chatId: Exclude<ChatId, "group">) => void;
   onSendToGroup?: (chatId: ChatId, message: ChatMessage) => void;
@@ -20,6 +21,7 @@ export function ChatPanel({
   isGroupPanel = false,
   isLoading = false,
   headerAction,
+  laneAction,
   onSendMessage,
   onCancelRequest,
   onSendToGroup,
@@ -51,6 +53,7 @@ export function ChatPanel({
           <span className="chat-panel__count">{messages.length}</span>
         </div>
       </header>
+      {laneAction && <div className="chat-panel__lane-action">{laneAction}</div>}
 
       <div className="chat-panel__messages" aria-live="polite">
         {messages.length === 0 ? (

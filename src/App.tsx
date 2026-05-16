@@ -43,6 +43,8 @@ function App() {
     groupChat,
     sendMessage,
     sendToGroup,
+    askAdvisorAboutGroup,
+    askAllAdvisorsAboutGroup,
     updateProject,
     updateOpenAISettings,
     updatePanelWidths,
@@ -105,6 +107,13 @@ function App() {
                 Synthesize Plan
               </button>
             )}
+            <button
+              className="chat-panel__header-button"
+              type="button"
+              onClick={askAllAdvisorsAboutGroup}
+            >
+              Ask All Advisors
+            </button>
           </div>
         }
         onSendMessage={sendMessage}
@@ -191,6 +200,16 @@ function App() {
           onSendMessage={sendMessage}
           onCancelRequest={cancelOpenAIRequest}
           onSendToGroup={sendToGroup}
+          laneAction={
+            <button
+              className="chat-panel__advisor-button"
+              type="button"
+              disabled={openAILaneLoading[leftChats[0].id]}
+              onClick={() => void askAdvisorAboutGroup(leftChats[0].id)}
+            >
+              Ask This Advisor About Group
+            </button>
+          }
         />
         <ChatPanel
           chat={leftChats[1]}
@@ -199,6 +218,16 @@ function App() {
           onSendMessage={sendMessage}
           onCancelRequest={cancelOpenAIRequest}
           onSendToGroup={sendToGroup}
+          laneAction={
+            <button
+              className="chat-panel__advisor-button"
+              type="button"
+              disabled={openAILaneLoading[leftChats[1].id]}
+              onClick={() => void askAdvisorAboutGroup(leftChats[1].id)}
+            >
+              Ask This Advisor About Group
+            </button>
+          }
         />
         {centerPanel}
         <ChatPanel
@@ -208,6 +237,16 @@ function App() {
           onSendMessage={sendMessage}
           onCancelRequest={cancelOpenAIRequest}
           onSendToGroup={sendToGroup}
+          laneAction={
+            <button
+              className="chat-panel__advisor-button"
+              type="button"
+              disabled={openAILaneLoading[rightChats[0].id]}
+              onClick={() => void askAdvisorAboutGroup(rightChats[0].id)}
+            >
+              Ask This Advisor About Group
+            </button>
+          }
         />
         <ChatPanel
           chat={rightChats[1]}
@@ -216,6 +255,16 @@ function App() {
           onSendMessage={sendMessage}
           onCancelRequest={cancelOpenAIRequest}
           onSendToGroup={sendToGroup}
+          laneAction={
+            <button
+              className="chat-panel__advisor-button"
+              type="button"
+              disabled={openAILaneLoading[rightChats[1].id]}
+              onClick={() => void askAdvisorAboutGroup(rightChats[1].id)}
+            >
+              Ask This Advisor About Group
+            </button>
+          }
         />
       </ResizableWarRoomGrid>
 
