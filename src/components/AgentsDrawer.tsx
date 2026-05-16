@@ -1,7 +1,12 @@
-import type { AgentCapability, AgentDefinition } from "../types";
+import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import type { AgentCapability, AgentDefinition, ProjectInspectionResult } from "../types";
 
 interface AgentsDrawerProps {
   agents: AgentDefinition[];
+  projectPath: string;
+  onSendScanResultToGroup: (scanResult: string) => void;
+  onSendScanResultToCarlos: (scanResult: string) => void;
 }
 
 const capabilityLabels: Record<AgentCapability, string> = {
@@ -22,7 +27,96 @@ const actionLabels: Record<AgentDefinition["id"], string[]> = {
   fido: ["Review Project Risks"]
 };
 
-export function AgentsDrawer({ agents }: AgentsDrawerProps) {
+function formatList(items: string[]) {
+  return items.length ? items.map((item) => `- ${item}`).join("\n") : "- None found";
+}
+
+function formatPackageScripts(scripts: Record<string, string>) {
+  const entries = Object.entries(scripts);
+  return entries.length
+    ? entries.map(([name, command]) => `- ${name}: ${command}`).join("\n")
+    : "- None found";
+}
+
+function formatScanResult(result: ProjectInspectionResult, projectPath: string) {
+  return [
+    "# Carlos Project Inspection",
+    "",
+    `Project path: ${projectPath}`,
+    `Detected project type: ${result.projectType}`,
+    `Scanned entries: ${result.scannedFileCount}`,
+    `Max depth: ${result.maxDepth}`,
+    "",
+    "## Top-Level Entries",
+    formatList(result.topLevelEntries),
+    "",
+    "## Important Files",
+    formatList(result.importantFiles),
+    "",
+    "## Package Scripts",
+    formatPackageScripts(result.packageScripts),
+    "",
+    "## Git Summary",
+    result.gitSummary,
+    "",
+    "## Suggested Verification Commands",
+    formatList(result.suggestedVerificationCommands)
+  ].join("\n");
+}
+
+export function AgentsDrawer({
+  agents,
+  projectPath,
+  onSendScanResultToGroup,
+  onSendScanResultToCarlos
+}: AgentsDrawerProps) {
+  const [scanResult, setScanResult] = useState<ProjectInspectionResult | null>(null);
+  const [scanError, setScanError] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
+  const [copyLabel, setCopyLabel] = useState("Copy Scan Result");
+  const formattedScanResult = scanResult ? formatScanResult(scanResult, projectPath) : "";
+
+  async function inspectProjectFiles() {
+    const trimmedPath = projectPath.trim();
+
+    if (!trimmedPath) {
+      setScanError("Select a project path before asking Carlos to inspect files.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Carlos will run a read-only scan of the selected project folder. It will not modify files or run scripts. Continue?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsScanning(true);
+    setScanError("");
+
+    try {
+      const result = await invoke<ProjectInspectionResult>("inspect_project_files", {
+        projectPath: trimmedPath
+      });
+      setScanResult(result);
+    } catch (error) {
+      setScanError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsScanning(false);
+    }
+  }
+
+  async function copyScanResult() {
+    if (!formattedScanResult) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(formattedScanResult);
+    setCopyLabel("Copied");
+    window.setTimeout(() => setCopyLabel("Copy Scan Result"), 1400);
+  }
+
   return (
     <section className="agents-drawer" aria-label="Agent Connector Layer">
       <header>
@@ -66,20 +160,73 @@ export function AgentsDrawer({ agents }: AgentsDrawerProps) {
               <button type="button" disabled>
                 Test Connection
               </button>
-              {actionLabels[agent.id].map((label) => (
-                <button key={label} type="button" disabled>
-                  {label}
-                </button>
-              ))}
+              {actionLabels[agent.id].map((label) => {
+                const isCarlosInspection = agent.id === "carlos" && label === "Inspect Project Files";
+
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    disabled={!isCarlosInspection || isScanning}
+                    onClick={isCarlosInspection ? inspectProjectFiles : undefined}
+                  >
+                    {isCarlosInspection && isScanning ? "Scanning..." : label}
+                  </button>
+                );
+              })}
             </div>
+
+            {agent.id === "carlos" && (
+              <div className="agent-scan" aria-live="polite">
+                <div className="agent-scan__header">
+                  <h4>Project Inspection</h4>
+                  <span>read-only</span>
+                </div>
+
+                {scanError && <p className="agent-scan__error">{scanError}</p>}
+
+                {scanResult ? (
+                  <>
+                    <div className="agent-scan__summary">
+                      <span>Type: {scanResult.projectType}</span>
+                      <span>Entries: {scanResult.scannedFileCount}</span>
+                      <span>Depth: {scanResult.maxDepth}</span>
+                    </div>
+                    <pre>{formattedScanResult}</pre>
+                    <div className="agent-scan__actions">
+                      <button type="button" onClick={() => void copyScanResult()}>
+                        {copyLabel}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSendScanResultToGroup(formattedScanResult)}
+                      >
+                        Send Scan Result to Group
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSendScanResultToCarlos(formattedScanResult)}
+                      >
+                        Send Scan Result to Carlos Chat
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p>
+                    Carlos can inspect folder shape, config files, package scripts, git branch,
+                    and suggested verification commands after confirmation.
+                  </p>
+                )}
+              </div>
+            )}
           </article>
         ))}
       </div>
 
       <p className="agents-drawer__safety">
-        Safety: no computer indexing, file inspection, or background command execution is active yet.
-        Future command and file access must require explicit user confirmation. The PowerShell runner
-        remains manual-confirm only.
+        Safety: Carlos project inspection is read-only, shallow, and manual-confirm only. No
+        computer indexing, arbitrary scripts, background scanning, or agent-run commands are active.
+        The PowerShell runner remains manual-confirm only.
       </p>
     </section>
   );

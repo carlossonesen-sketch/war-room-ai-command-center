@@ -49,6 +49,17 @@ export interface AgentDefinition {
   localPath: string;
 }
 
+export interface ProjectInspectionResult {
+  projectType: string;
+  importantFiles: string[];
+  packageScripts: Record<string, string>;
+  gitSummary: string;
+  topLevelEntries: string[];
+  suggestedVerificationCommands: string[];
+  scannedFileCount: number;
+  maxDepth: number;
+}
+
 export interface ProjectContext {
   id: string;
   name: string;

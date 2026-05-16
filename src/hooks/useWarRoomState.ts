@@ -904,6 +904,57 @@ export function useWarRoomState() {
     });
   }, []);
 
+  const sendCarlosScanResultToGroup = useCallback((scanResult: string) => {
+    const trimmed = scanResult.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    setState((currentState) => {
+      const currentProjectId = currentState.project.id;
+      const currentChats = currentState.chatsByProject[currentProjectId] ?? emptyChats;
+
+      return {
+        ...currentState,
+        chatsByProject: {
+          ...currentState.chatsByProject,
+          [currentProjectId]: {
+            ...currentChats,
+            group: [...currentChats.group, createMessage("group", trimmed, "Carlos")]
+          }
+        }
+      };
+    });
+  }, []);
+
+  const sendCarlosScanResultToChat = useCallback((scanResult: string) => {
+    const trimmed = scanResult.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    setState((currentState) => {
+      const currentProjectId = currentState.project.id;
+      const currentChats = currentState.chatsByProject[currentProjectId] ?? emptyChats;
+
+      return {
+        ...currentState,
+        chatsByProject: {
+          ...currentState.chatsByProject,
+          [currentProjectId]: {
+            ...currentChats,
+            cursor: [
+              ...currentChats.cursor,
+              createMessage("assistant", trimmed, "Carlos Project Inspection", "war-room")
+            ]
+          }
+        }
+      };
+    });
+  }, []);
+
   const saveGeneratedPrompt = useCallback((promptText: string) => {
     const trimmed = promptText.trim();
 
@@ -1195,6 +1246,8 @@ export function useWarRoomState() {
     updateProjectNotes,
     sendNotesToGroup,
     sendCommandOutputToGroup,
+    sendCarlosScanResultToGroup,
+    sendCarlosScanResultToChat,
     saveGeneratedPrompt,
     deleteGeneratedPrompt,
     sendGeneratedPromptToGroup,

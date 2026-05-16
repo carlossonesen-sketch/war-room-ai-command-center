@@ -779,6 +779,86 @@ button {
   cursor: not-allowed;
 }
 
+.agent-card button:not(:disabled) {
+  border-color: rgba(142, 223, 255, 0.28);
+  color: var(--accent-strong);
+  background: rgba(142, 223, 255, 0.08);
+  cursor: pointer;
+}
+
+.agent-card button:not(:disabled):hover {
+  border-color: rgba(142, 223, 255, 0.46);
+  background: rgba(142, 223, 255, 0.13);
+}
+
+.agent-scan {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  border: 1px solid rgba(142, 223, 255, 0.16);
+  border-radius: 10px;
+  background: rgba(5, 8, 13, 0.5);
+  padding: 9px;
+}
+
+.agent-scan__header,
+.agent-scan__summary,
+.agent-scan__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.agent-scan__header {
+  justify-content: space-between;
+}
+
+.agent-scan h4 {
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+}
+
+.agent-scan__header span,
+.agent-scan__summary span {
+  border: 1px solid rgba(160, 178, 210, 0.16);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 3px 7px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.agent-scan p,
+.agent-scan__error {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.agent-scan__error {
+  color: #ffb9b3;
+}
+
+.agent-scan pre {
+  max-height: 230px;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid rgba(160, 178, 210, 0.16);
+  border-radius: 9px;
+  color: #eef3ff;
+  background: rgba(3, 6, 10, 0.74);
+  padding: 10px;
+  font-family: "Cascadia Code", Consolas, "Courier New", monospace;
+  font-size: 0.68rem;
+  line-height: 1.42;
+  white-space: pre-wrap;
+}
+
 .war-room-grid {
   display: grid;
   gap: 0;

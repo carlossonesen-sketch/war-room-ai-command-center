@@ -57,6 +57,8 @@ function App() {
     updateProjectNotes,
     sendNotesToGroup,
     sendCommandOutputToGroup,
+    sendCarlosScanResultToGroup,
+    sendCarlosScanResultToChat,
     saveGeneratedPrompt,
     deleteGeneratedPrompt,
     sendGeneratedPromptToGroup,
@@ -177,7 +179,14 @@ function App() {
               />
             )}
 
-            {activeDrawer === "agents" && <AgentsDrawer agents={agentDefinitions} />}
+            {activeDrawer === "agents" && (
+              <AgentsDrawer
+                agents={agentDefinitions}
+                projectPath={project.path}
+                onSendScanResultToGroup={sendCarlosScanResultToGroup}
+                onSendScanResultToCarlos={sendCarlosScanResultToChat}
+              />
+            )}
 
             {activeDrawer === "runner" && (
               <CommandRunner
