@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BackupControls } from "./components/BackupControls";
 import { ChatPanel } from "./components/ChatPanel";
 import { CommandRunner } from "./components/CommandRunner";
+import { CursorPromptModal } from "./components/CursorPromptModal";
 import { OpenAISettingsPanel } from "./components/OpenAISettingsPanel";
 import { ProjectNotesPanel } from "./components/ProjectNotesPanel";
 import { ProjectSelector } from "./components/ProjectSelector";
@@ -26,6 +27,7 @@ function App() {
     const stored = window.localStorage.getItem(DRAWER_STORAGE_KEY);
     return drawerButtons.some((drawer) => drawer.id === stored) ? (stored as DrawerId) : null;
   });
+  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
   const {
     chats,
     project,
@@ -34,6 +36,7 @@ function App() {
     openAILaneLoading,
     groupSynthesisLoading,
     panelWidths,
+    promptHistory,
     summary,
     fullState,
     individualChats,
@@ -49,6 +52,9 @@ function App() {
     updateProjectNotes,
     sendNotesToGroup,
     sendCommandOutputToGroup,
+    saveGeneratedPrompt,
+    deleteGeneratedPrompt,
+    sendGeneratedPromptToGroup,
     markGroupMessage,
     clearAllChats,
     resetCurrentProject,
@@ -74,23 +80,32 @@ function App() {
         isGroupPanel
         isLoading={groupSynthesisLoading}
         headerAction={
-          groupSynthesisLoading ? (
-            <button
-              className="chat-panel__header-button chat-panel__header-button--danger"
-              type="button"
-              onClick={cancelGroupSynthesis}
-            >
-              Cancel
-            </button>
-          ) : (
+          <div className="chat-panel__header-actions">
             <button
               className="chat-panel__header-button"
               type="button"
-              onClick={synthesizeGroupPlan}
+              onClick={() => setIsPromptModalOpen(true)}
             >
-              Synthesize Plan
+              Generate Cursor Prompt
             </button>
-          )
+            {groupSynthesisLoading ? (
+              <button
+                className="chat-panel__header-button chat-panel__header-button--danger"
+                type="button"
+                onClick={cancelGroupSynthesis}
+              >
+                Cancel
+              </button>
+            ) : (
+              <button
+                className="chat-panel__header-button"
+                type="button"
+                onClick={synthesizeGroupPlan}
+              >
+                Synthesize Plan
+              </button>
+            )}
+          </div>
         }
         onSendMessage={sendMessage}
         onMarkGroupMessage={markGroupMessage}
@@ -203,6 +218,20 @@ function App() {
           onSendToGroup={sendToGroup}
         />
       </ResizableWarRoomGrid>
+
+      {isPromptModalOpen && (
+        <CursorPromptModal
+          project={project}
+          notes={projectNotes}
+          groupMessages={chats.group}
+          summary={summary}
+          promptHistory={promptHistory}
+          onClose={() => setIsPromptModalOpen(false)}
+          onSavePrompt={saveGeneratedPrompt}
+          onDeletePrompt={deleteGeneratedPrompt}
+          onSendPromptToGroup={sendGeneratedPromptToGroup}
+        />
+      )}
     </main>
   );
 }

@@ -44,6 +44,13 @@ export interface OpenAISettings {
 
 export type PanelWidths = [number, number, number, number, number];
 
+export interface GeneratedPrompt {
+  id: string;
+  projectName: string;
+  text: string;
+  createdAt: string;
+}
+
 export type WarRoomChats = Record<ChatId, ChatMessage[]>;
 
 export type WarRoomSummary = Record<PlanningCategory, ChatMessage[]>;
@@ -54,4 +61,5 @@ export interface WarRoomState {
   notesByProject: Record<string, ProjectNotes>;
   openAISettings: OpenAISettings;
   panelWidths: PanelWidths;
+  promptHistory: GeneratedPrompt[];
 }

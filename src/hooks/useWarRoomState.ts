@@ -3,6 +3,7 @@ import type {
   ChatDefinition,
   ChatId,
   ChatMessage,
+  GeneratedPrompt,
   OpenAISettings,
   PanelWidths,
   PlanningCategory,
@@ -183,6 +184,22 @@ function normalizePanelWidths(widths: unknown): PanelWidths {
   return parsed as PanelWidths;
 }
 
+function normalizePromptHistory(history: unknown): GeneratedPrompt[] {
+  if (!Array.isArray(history)) {
+    return [];
+  }
+
+  return history
+    .filter((prompt): prompt is Partial<GeneratedPrompt> => Boolean(prompt))
+    .map((prompt) => ({
+      id: typeof prompt.id === "string" ? prompt.id : crypto.randomUUID(),
+      projectName: typeof prompt.projectName === "string" ? prompt.projectName : "Untitled Project",
+      text: typeof prompt.text === "string" ? prompt.text : "",
+      createdAt: typeof prompt.createdAt === "string" ? prompt.createdAt : new Date().toISOString()
+    }))
+    .filter((prompt) => prompt.text.trim());
+}
+
 function normalizeNotesByProject(
   notesByProject: Record<string, Partial<ProjectNotes>> | undefined,
   projectId: string
@@ -218,7 +235,8 @@ function normalizeState(candidate: unknown): WarRoomState | null {
     chatsByProject,
     notesByProject: normalizeNotesByProject(parsed.notesByProject, project.id),
     openAISettings: normalizeOpenAISettings(parsed.openAISettings),
-    panelWidths: normalizePanelWidths(parsed.panelWidths)
+    panelWidths: normalizePanelWidths(parsed.panelWidths),
+    promptHistory: normalizePromptHistory(parsed.promptHistory)
   };
 }
 
@@ -307,7 +325,8 @@ function loadStoredState(): WarRoomState {
       chatsByProject: { [defaultProject.id]: emptyChats },
       notesByProject: { [defaultProject.id]: emptyProjectNotes },
       openAISettings: defaultOpenAISettings,
-      panelWidths: defaultPanelWidths
+      panelWidths: defaultPanelWidths,
+      promptHistory: []
     };
   }
 
@@ -330,7 +349,8 @@ function loadStoredState(): WarRoomState {
         chatsByProject: { [defaultProject.id]: normalizeChats(JSON.parse(legacyChats)) },
         notesByProject: { [defaultProject.id]: emptyProjectNotes },
         openAISettings: defaultOpenAISettings,
-        panelWidths: defaultPanelWidths
+        panelWidths: defaultPanelWidths,
+        promptHistory: []
       };
     }
   } catch {
@@ -339,7 +359,8 @@ function loadStoredState(): WarRoomState {
       chatsByProject: { [defaultProject.id]: emptyChats },
       notesByProject: { [defaultProject.id]: emptyProjectNotes },
       openAISettings: defaultOpenAISettings,
-      panelWidths: defaultPanelWidths
+      panelWidths: defaultPanelWidths,
+      promptHistory: []
     };
   }
 
@@ -348,7 +369,8 @@ function loadStoredState(): WarRoomState {
     chatsByProject: { [defaultProject.id]: emptyChats },
     notesByProject: { [defaultProject.id]: emptyProjectNotes },
     openAISettings: defaultOpenAISettings,
-    panelWidths: defaultPanelWidths
+    panelWidths: defaultPanelWidths,
+    promptHistory: []
   };
 }
 
@@ -366,6 +388,7 @@ export function useWarRoomState() {
   const projectNotes = state.notesByProject[project.id] ?? emptyProjectNotes;
   const { openAISettings } = state;
   const panelWidths = state.panelWidths;
+  const promptHistory = state.promptHistory;
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -749,6 +772,58 @@ export function useWarRoomState() {
     });
   }, []);
 
+  const saveGeneratedPrompt = useCallback((promptText: string) => {
+    const trimmed = promptText.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    setState((currentState) => ({
+      ...currentState,
+      promptHistory: [
+        {
+          id: crypto.randomUUID(),
+          projectName: currentState.project.name,
+          text: trimmed,
+          createdAt: new Date().toISOString()
+        },
+        ...currentState.promptHistory
+      ].slice(0, 20)
+    }));
+  }, []);
+
+  const deleteGeneratedPrompt = useCallback((promptId: string) => {
+    setState((currentState) => ({
+      ...currentState,
+      promptHistory: currentState.promptHistory.filter((prompt) => prompt.id !== promptId)
+    }));
+  }, []);
+
+  const sendGeneratedPromptToGroup = useCallback((promptText: string) => {
+    const trimmed = promptText.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    setState((currentState) => {
+      const currentProjectId = currentState.project.id;
+      const currentChats = currentState.chatsByProject[currentProjectId] ?? emptyChats;
+
+      return {
+        ...currentState,
+        chatsByProject: {
+          ...currentState.chatsByProject,
+          [currentProjectId]: {
+            ...currentChats,
+            group: [...currentChats.group, createMessage("group", trimmed, "Cursor Prompt")]
+          }
+        }
+      };
+    });
+  }, []);
+
   const markGroupMessage = useCallback((messageId: string, category: PlanningCategory) => {
     setState((currentState) => {
       const currentProjectId = currentState.project.id;
@@ -835,6 +910,7 @@ export function useWarRoomState() {
     projectNotes,
     openAISettings,
     panelWidths,
+    promptHistory,
     openAILaneLoading,
     groupSynthesisLoading,
     summary,
@@ -852,6 +928,9 @@ export function useWarRoomState() {
     updateProjectNotes,
     sendNotesToGroup,
     sendCommandOutputToGroup,
+    saveGeneratedPrompt,
+    deleteGeneratedPrompt,
+    sendGeneratedPromptToGroup,
     markGroupMessage,
     clearAllChats,
     resetCurrentProject,
