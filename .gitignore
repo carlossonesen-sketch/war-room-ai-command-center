@@ -2,6 +2,13 @@ node_modules/
 dist/
 src-tauri/target/
 
+war-room/
+memory/
+projects/
+scripts/
+war-room-backup-*.json
+*.backup.json
+
 *.log
 *.tmp
 

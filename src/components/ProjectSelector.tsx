@@ -1,14 +1,51 @@
 import { ProjectActions } from "./ProjectActions";
-import type { ProjectContext, ProjectStatus } from "../types";
+import type { ProjectAliasMap, ProjectContext, ProjectStatus } from "../types";
 
 const projectStatuses: ProjectStatus[] = ["Idea", "Building", "Testing", "Launched"];
 
 interface ProjectSelectorProps {
   project: ProjectContext;
+  localWorkspaceRoot: string;
+  projectAliases: ProjectAliasMap;
   onUpdateProject: (updates: Partial<ProjectContext>) => void;
+  onUpdateLocalWorkspaceRoot: (rootPath: string) => void;
+  onUpdateProjectAliases: (aliases: ProjectAliasMap) => void;
 }
 
-export function ProjectSelector({ project, onUpdateProject }: ProjectSelectorProps) {
+export function ProjectSelector({
+  project,
+  localWorkspaceRoot,
+  projectAliases,
+  onUpdateProject,
+  onUpdateLocalWorkspaceRoot,
+  onUpdateProjectAliases
+}: ProjectSelectorProps) {
+  const aliasText = Object.entries(projectAliases)
+    .map(([projectName, aliases]) => `${projectName}: ${aliases.join(", ")}`)
+    .join("\n");
+
+  function updateAliases(value: string) {
+    const aliases = value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .reduce<ProjectAliasMap>((nextAliases, line) => {
+        const [projectName, aliasList = ""] = line.split(":");
+        const trimmedProject = projectName?.trim();
+
+        if (trimmedProject) {
+          nextAliases[trimmedProject] = aliasList
+            .split(",")
+            .map((alias) => alias.trim())
+            .filter(Boolean);
+        }
+
+        return nextAliases;
+      }, {});
+
+    onUpdateProjectAliases(aliases);
+  }
+
   return (
     <section className="project-selector" aria-label="Project selector">
       <label>
@@ -21,7 +58,7 @@ export function ProjectSelector({ project, onUpdateProject }: ProjectSelectorPro
       </label>
 
       <label className="project-selector__path">
-        <span>Local path</span>
+        <span>Selected live project path</span>
         <input
           type="text"
           value={project.path}
@@ -43,7 +80,33 @@ export function ProjectSelector({ project, onUpdateProject }: ProjectSelectorPro
         </select>
       </label>
 
+      <label className="project-selector__path">
+        <span>War Room workspace root</span>
+        <input
+          type="text"
+          value={localWorkspaceRoot}
+          onChange={(event) => onUpdateLocalWorkspaceRoot(event.target.value)}
+          placeholder="D:\\dev\\war-room"
+        />
+      </label>
+
+      <div className="project-selector__storage-note">
+        <strong>Local workspace layout</strong>
+        <span>D:\dev\war-room\projects = full read-only project code copies.</span>
+        <span>D:\dev\war-room\memory = markdown memory and status summaries only.</span>
+        <span>War Room never writes to project copies unless a future write mode is explicitly enabled.</span>
+      </div>
+
       <ProjectActions projectPath={project.path} />
+
+      <label className="project-selector__aliases">
+        <span>Project aliases</span>
+        <textarea
+          value={aliasText}
+          onChange={(event) => updateAliases(event.target.value)}
+          rows={5}
+        />
+      </label>
     </section>
   );
 }

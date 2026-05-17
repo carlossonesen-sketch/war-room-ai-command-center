@@ -30,6 +30,28 @@ struct ProjectInspectionResult {
     max_depth: usize,
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalMemoryFile {
+    name: String,
+    path: String,
+    size_bytes: u64,
+    content: String,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalMemoryResult {
+    root_path: String,
+    memory_context: String,
+    active_memory_context: String,
+    reference_memory_context: String,
+    direct_answer: Option<String>,
+    loaded_projects: Vec<String>,
+    files: Vec<LocalMemoryFile>,
+    warning: Option<String>,
+}
+
 fn validate_project_path(project_path: String) -> Result<PathBuf, String> {
     let trimmed = project_path.trim();
 
@@ -44,6 +66,231 @@ fn validate_project_path(project_path: String) -> Result<PathBuf, String> {
     }
 
     Ok(path)
+}
+
+fn read_markdown_memory_file(path: &Path, root: &Path) -> Result<Option<LocalMemoryFile>, String> {
+    const MAX_MEMORY_FILE_BYTES: u64 = 32 * 1024;
+
+    if !path.exists() || !path.is_file() {
+        return Ok(None);
+    }
+
+    let metadata = fs::metadata(path)
+        .map_err(|error| format!("Could not read memory file metadata {}: {error}", path.display()))?;
+
+    if metadata.len() > MAX_MEMORY_FILE_BYTES {
+        return Ok(Some(LocalMemoryFile {
+            name: path
+                .file_name()
+                .map(|name| name.to_string_lossy().to_string())
+                .unwrap_or_else(|| "memory.md".into()),
+            path: display_relative(path, root),
+            size_bytes: metadata.len(),
+            content: format!(
+                "Skipped because this memory file is larger than {} KB.",
+                MAX_MEMORY_FILE_BYTES / 1024
+            ),
+        }));
+    }
+
+    let content = fs::read_to_string(path)
+        .map_err(|error| format!("Could not read memory file {}: {error}", path.display()))?;
+
+    Ok(Some(LocalMemoryFile {
+        name: path
+            .file_name()
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_else(|| "memory.md".into()),
+        path: display_relative(path, root),
+        size_bytes: metadata.len(),
+        content,
+    }))
+}
+
+fn normalize_memory_name(name: &str) -> String {
+    name.to_lowercase()
+        .replace(['-', '_'], " ")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn is_basic_status_question(message: &str) -> bool {
+    let normalized = message.to_lowercase();
+    let has_status_word = ["status", "progress", "todo", "next", "done", "changed", "decision"]
+        .iter()
+        .any(|word| normalized.contains(word));
+    let is_question = normalized.contains('?')
+        || normalized.starts_with("what")
+        || normalized.starts_with("where")
+        || normalized.starts_with("how")
+        || normalized.starts_with("show")
+        || normalized.starts_with("tell");
+
+    has_status_word && is_question
+}
+
+fn memory_file_matches_project(path: &Path, project_name: &str) -> bool {
+    let normalized_project = normalize_memory_name(project_name);
+
+    if normalized_project.is_empty() {
+        return false;
+    }
+
+    path.file_stem()
+        .map(|stem| normalize_memory_name(&stem.to_string_lossy()))
+        .is_some_and(|stem| {
+            stem == normalized_project
+                || stem.contains(&normalized_project)
+                || normalized_project.contains(&stem)
+        })
+}
+
+fn format_memory_context(files: &[LocalMemoryFile]) -> String {
+    files
+        .iter()
+        .map(|file| format!("## {}\n{}", file.path, file.content.trim()))
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+#[tauri::command]
+fn load_war_room_memory(
+    root_path: String,
+    message: String,
+    active_project_name: String,
+    reference_project_name: Option<String>,
+) -> Result<LocalMemoryResult, String> {
+    let trimmed_root = if root_path.trim().is_empty() {
+        "D:\\dev\\war-room"
+    } else {
+        root_path.trim()
+    };
+    let root = PathBuf::from(trimmed_root);
+    let memory_dir = root.join("memory");
+
+    if !memory_dir.exists() {
+        return Ok(LocalMemoryResult {
+            root_path: trimmed_root.into(),
+            memory_context: String::new(),
+            active_memory_context: String::new(),
+            reference_memory_context: String::new(),
+            direct_answer: None,
+            loaded_projects: Vec::new(),
+            files: Vec::new(),
+            warning: Some("No local memory folder found yet.".into()),
+        });
+    }
+
+    if !memory_dir.is_dir() {
+        return Err("Configured War Room memory path is not a folder.".into());
+    }
+
+    let fixed_memory_names = ["project-status.md", "war-room-rules.md"];
+    let mut core_files = Vec::new();
+    let mut active_files = Vec::new();
+    let mut reference_files = Vec::new();
+    let mut loaded_projects = Vec::new();
+
+    // Always load only the core operating memory. Project files are scoped below.
+    for file_name in fixed_memory_names {
+        if let Some(memory_file) = read_markdown_memory_file(&memory_dir.join(file_name), &root)? {
+            core_files.push(memory_file);
+        }
+    }
+
+    let mut project_memory_files = fs::read_dir(&memory_dir)
+        .map_err(|error| format!("Could not read War Room memory folder: {error}"))?
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.is_file()
+                && path.extension().is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+                && !fixed_memory_names.iter().any(|fixed| {
+                    path.file_name()
+                        .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case(fixed))
+                })
+        })
+        .collect::<Vec<_>>();
+    project_memory_files.sort();
+
+    for path in project_memory_files.into_iter().take(24) {
+        if memory_file_matches_project(&path, &active_project_name) {
+            loaded_projects.push(active_project_name.clone());
+            if let Some(memory_file) = read_markdown_memory_file(&path, &root)? {
+                active_files.push(memory_file);
+            }
+            continue;
+        }
+
+        if let Some(reference_project) = reference_project_name.as_deref() {
+            if memory_file_matches_project(&path, reference_project) {
+                loaded_projects.push(reference_project.into());
+                if let Some(memory_file) = read_markdown_memory_file(&path, &root)? {
+                    reference_files.push(memory_file);
+                }
+            }
+        }
+    }
+
+    loaded_projects.sort();
+    loaded_projects.dedup();
+
+    let core_context = format_memory_context(&core_files);
+    let active_memory_context = format_memory_context(&active_files);
+    let reference_memory_context = format_memory_context(&reference_files);
+    let mut context_sections = Vec::new();
+
+    if !core_context.trim().is_empty() {
+        context_sections.push(format!("## Core War Room Memory\n{}", core_context));
+    }
+
+    if !active_memory_context.trim().is_empty() {
+        context_sections.push(format!(
+            "## Active Project Memory: {}\n{}",
+            active_project_name, active_memory_context
+        ));
+    }
+
+    if let Some(reference_project) = reference_project_name.as_deref() {
+        if !reference_memory_context.trim().is_empty() {
+            context_sections.push(format!(
+                "## Reference Project Memory: {}\n{}",
+                reference_project, reference_memory_context
+            ));
+        }
+    }
+
+    let memory_context = context_sections
+        .into_iter()
+        .filter(|section| !section.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n\n");
+
+    let direct_answer = if is_basic_status_question(&message) && !memory_context.trim().is_empty() {
+        Some(format!(
+            "Local memory may already answer this for active focus {}:\n\n{}",
+            active_project_name, memory_context
+        ))
+    } else {
+        None
+    };
+    let files = core_files
+        .into_iter()
+        .chain(active_files)
+        .chain(reference_files)
+        .collect();
+
+    Ok(LocalMemoryResult {
+        root_path: trimmed_root.into(),
+        memory_context,
+        active_memory_context,
+        reference_memory_context,
+        direct_answer,
+        loaded_projects,
+        files,
+        warning: None,
+    })
 }
 
 fn should_ignore_path(path: &Path, root: &Path) -> bool {
@@ -446,6 +693,7 @@ pub fn run() {
             open_in_cursor,
             open_terminal,
             inspect_project_files,
+            load_war_room_memory,
             run_powershell_command
         ])
         .run(tauri::generate_context!())

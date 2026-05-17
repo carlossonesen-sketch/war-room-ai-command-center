@@ -5,6 +5,8 @@ import type { AgentCapability, AgentDefinition, ProjectInspectionResult } from "
 interface AgentsDrawerProps {
   agents: AgentDefinition[];
   projectPath: string;
+  localWorkspaceRoot: string;
+  activeProjectFocus: string;
   onSendScanResultToGroup: (scanResult: string) => void;
   onSendScanResultToCarlos: (scanResult: string) => void;
 }
@@ -38,10 +40,26 @@ function formatPackageScripts(scripts: Record<string, string>) {
     : "- None found";
 }
 
-function formatScanResult(result: ProjectInspectionResult, projectPath: string) {
+type InspectionTarget = "auto" | "copy" | "live";
+
+function sanitizeCopyFolderName(projectName: string) {
+  return projectName.trim().replace(/[<>:"/\\|?*]+/g, "-") || "project";
+}
+
+function buildCopyProjectPath(localWorkspaceRoot: string, activeProjectFocus: string) {
+  const root = localWorkspaceRoot.trim() || "D:\\dev\\war-room";
+  return `${root.replace(/[\\/]$/, "")}\\projects\\${sanitizeCopyFolderName(activeProjectFocus)}`;
+}
+
+function formatScanResult(
+  result: ProjectInspectionResult,
+  projectPath: string,
+  sourceLabel: string
+) {
   return [
     "# Carlos Project Inspection",
     "",
+    `Inspection source: ${sourceLabel}`,
     `Project path: ${projectPath}`,
     `Detected project type: ${result.projectType}`,
     `Scanned entries: ${result.scannedFileCount}`,
@@ -67,6 +85,8 @@ function formatScanResult(result: ProjectInspectionResult, projectPath: string) 
 export function AgentsDrawer({
   agents,
   projectPath,
+  localWorkspaceRoot,
+  activeProjectFocus,
   onSendScanResultToGroup,
   onSendScanResultToCarlos
 }: AgentsDrawerProps) {
@@ -74,18 +94,26 @@ export function AgentsDrawer({
   const [scanError, setScanError] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy Scan Result");
-  const formattedScanResult = scanResult ? formatScanResult(scanResult, projectPath) : "";
+  const [inspectionTarget, setInspectionTarget] = useState<InspectionTarget>("auto");
+  const [lastInspectedPath, setLastInspectedPath] = useState("");
+  const [lastInspectionSource, setLastInspectionSource] = useState("");
+  const copyProjectPath = buildCopyProjectPath(localWorkspaceRoot, activeProjectFocus);
+  const formattedScanResult =
+    scanResult && lastInspectedPath
+      ? formatScanResult(scanResult, lastInspectedPath, lastInspectionSource)
+      : "";
 
   async function inspectProjectFiles() {
-    const trimmedPath = projectPath.trim();
+    const livePath = projectPath.trim();
+    const copyPath = copyProjectPath.trim();
 
-    if (!trimmedPath) {
-      setScanError("Select a project path before asking Carlos to inspect files.");
+    if (!livePath && inspectionTarget !== "copy") {
+      setScanError("Select a live project path or use a War Room read-only project copy.");
       return;
     }
 
     const confirmed = window.confirm(
-      "Carlos will run a read-only scan of the selected project folder. It will not modify files or run scripts. Continue?"
+      "Carlos will run a read-only inspection. War Room project copies under D:\\dev\\war-room\\projects are never written by this action. Continue?"
     );
 
     if (!confirmed) {
@@ -96,10 +124,30 @@ export function AgentsDrawer({
     setScanError("");
 
     try {
-      const result = await invoke<ProjectInspectionResult>("inspect_project_files", {
-        projectPath: trimmedPath
-      });
+      let inspectedPath = inspectionTarget === "live" ? livePath : copyPath;
+      let sourceLabel =
+        inspectionTarget === "live" ? "Selected live project path" : "War Room read-only copy";
+      let result: ProjectInspectionResult;
+
+      try {
+        result = await invoke<ProjectInspectionResult>("inspect_project_files", {
+          projectPath: inspectedPath
+        });
+      } catch (error) {
+        if (inspectionTarget !== "auto" || !livePath) {
+          throw error;
+        }
+
+        inspectedPath = livePath;
+        sourceLabel = "Selected live project path (copy unavailable)";
+        result = await invoke<ProjectInspectionResult>("inspect_project_files", {
+          projectPath: inspectedPath
+        });
+      }
+
       setScanResult(result);
+      setLastInspectedPath(inspectedPath);
+      setLastInspectionSource(sourceLabel);
     } catch (error) {
       setScanError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -182,6 +230,27 @@ export function AgentsDrawer({
                   <h4>Project Inspection</h4>
                   <span>read-only</span>
                 </div>
+                <p>
+                  Defaults to the War Room read-only copy when available. Live project inspection is
+                  also read-only and never runs scripts.
+                </p>
+
+                <label className="agent-scan__target">
+                  <span>Inspection source</span>
+                  <select
+                    value={inspectionTarget}
+                    onChange={(event) => setInspectionTarget(event.target.value as InspectionTarget)}
+                  >
+                    <option value="auto">Auto: copy first, then live path</option>
+                    <option value="copy">War Room read-only copy</option>
+                    <option value="live">Selected live project path</option>
+                  </select>
+                </label>
+
+                <div className="agent-scan__paths">
+                  <span>Copy: {copyProjectPath}</span>
+                  <span>Live: {projectPath || "Not set"}</span>
+                </div>
 
                 {scanError && <p className="agent-scan__error">{scanError}</p>}
 
@@ -191,6 +260,7 @@ export function AgentsDrawer({
                       <span>Type: {scanResult.projectType}</span>
                       <span>Entries: {scanResult.scannedFileCount}</span>
                       <span>Depth: {scanResult.maxDepth}</span>
+                      <span>{lastInspectionSource}</span>
                     </div>
                     <pre>{formattedScanResult}</pre>
                     <div className="agent-scan__actions">
@@ -226,7 +296,7 @@ export function AgentsDrawer({
       <p className="agents-drawer__safety">
         Safety: Carlos project inspection is read-only, shallow, and manual-confirm only. No
         computer indexing, arbitrary scripts, background scanning, or agent-run commands are active.
-        The PowerShell runner remains manual-confirm only.
+        War Room project copies live under D:\dev\war-room\projects and are treated as read-only.
       </p>
     </section>
   );

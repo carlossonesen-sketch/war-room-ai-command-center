@@ -60,6 +60,39 @@ export interface ProjectInspectionResult {
   maxDepth: number;
 }
 
+export interface LocalMemoryFile {
+  name: string;
+  path: string;
+  sizeBytes: number;
+  content: string;
+}
+
+export interface LocalMemoryResult {
+  rootPath: string;
+  memoryContext: string;
+  activeMemoryContext: string;
+  referenceMemoryContext: string;
+  directAnswer?: string;
+  loadedProjects: string[];
+  files: LocalMemoryFile[];
+  warning?: string;
+}
+
+export type ProjectAliasMap = Record<string, string[]>;
+
+export interface MemoryInspectorState {
+  lastMemory?: LocalMemoryResult;
+  lastLoadedAt?: string;
+  skippedAi: boolean;
+  receivedAgents: string[];
+  contextPreview: string;
+  focusAliasTriggers: string[];
+  referenceAliasTriggers: string[];
+  eventLog: string[];
+  verboseLogging: boolean;
+  lastError?: string;
+}
+
 export interface ProjectContext {
   id: string;
   name: string;
@@ -99,6 +132,11 @@ export interface WarRoomState {
   chatsByProject: Record<string, WarRoomChats>;
   notesByProject: Record<string, ProjectNotes>;
   openAISettings: OpenAISettings;
+  autoCouncilEnabled: boolean;
+  localWorkspaceRoot: string;
+  activeProjectFocus: string;
+  referenceProjectContext: string;
+  projectAliases: ProjectAliasMap;
   panelWidths: PanelWidths;
   promptHistory: GeneratedPrompt[];
 }

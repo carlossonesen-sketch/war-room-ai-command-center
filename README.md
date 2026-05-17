@@ -113,3 +113,9 @@ War Room is local-first, and there is no backend in this MVP. Project data, note
 OpenAI API keys are currently stored in localStorage for local development convenience only. This is not production-hardened secret storage. Before using War Room in a production or shared environment, API key handling should be moved to a secure storage layer such as the operating system keychain or Tauri-managed secure storage.
 
 When real AI responses are enabled, the selected lane sends recent messages and selected project context to the OpenAI API. The Group War Room only calls OpenAI when the user explicitly runs synthesis.
+
+## Local Data Not Committed
+
+`D:\dev\war-room\memory` contains private local markdown memory and status summaries. `D:\dev\war-room\projects` contains read-only local project mirrors. These local data folders are intentionally not committed to GitHub.
+
+Only the War Room app logic should be committed. Do not commit secrets, API keys, local memory files, backups, or project mirrors.

@@ -178,7 +178,8 @@ button {
 }
 
 .project-selector input,
-.project-selector select {
+.project-selector select,
+.project-selector textarea {
   width: 100%;
   min-width: 0;
   border: 1px solid var(--border);
@@ -190,8 +191,36 @@ button {
 }
 
 .project-selector input:focus,
-.project-selector select:focus {
+.project-selector select:focus,
+.project-selector textarea:focus {
   border-color: var(--accent);
+}
+
+.project-selector textarea {
+  resize: vertical;
+  min-height: 96px;
+  font-family: inherit;
+}
+
+.project-selector__aliases {
+  grid-column: 1 / -1;
+}
+
+.project-selector__storage-note {
+  display: grid;
+  gap: 4px;
+  grid-column: 1 / -1;
+  border: 1px solid rgba(255, 212, 122, 0.2);
+  border-radius: 10px;
+  color: var(--muted);
+  background: rgba(255, 212, 122, 0.06);
+  padding: 10px;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.project-selector__storage-note strong {
+  color: #ffe7a3;
 }
 
 .project-selector select option {
@@ -791,6 +820,149 @@ button {
   background: rgba(142, 223, 255, 0.13);
 }
 
+.memory-inspector {
+  display: grid;
+  gap: 12px;
+  max-height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(17, 23, 34, 0.64);
+  padding: 12px;
+}
+
+.memory-inspector header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.memory-inspector h2,
+.memory-inspector h3 {
+  margin: 0;
+  color: var(--accent-strong);
+}
+
+.memory-inspector h2 {
+  font-size: 0.98rem;
+}
+
+.memory-inspector h3 {
+  font-size: 0.82rem;
+}
+
+.memory-inspector p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.memory-inspector__actions,
+.memory-inspector__grid,
+.memory-inspector__columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.memory-inspector__actions {
+  justify-content: flex-end;
+}
+
+.memory-inspector button {
+  border: 1px solid rgba(142, 223, 255, 0.24);
+  border-radius: 8px;
+  color: var(--accent-strong);
+  background: rgba(142, 223, 255, 0.08);
+  padding: 7px 9px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.memory-inspector button.is-active {
+  border-color: rgba(92, 200, 167, 0.46);
+  color: #06100d;
+  background: var(--accent);
+}
+
+.memory-inspector__grid article,
+.memory-inspector__columns section {
+  min-width: 180px;
+  flex: 1 1 180px;
+  border: 1px solid rgba(160, 178, 210, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 10px;
+}
+
+.memory-inspector__grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.memory-inspector__grid strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.memory-inspector__files,
+.memory-inspector__log ul {
+  display: grid;
+  gap: 7px;
+  max-height: 145px;
+  margin: 8px 0 0;
+  overflow-y: auto;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-inspector__files li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.memory-inspector__files li span {
+  overflow-wrap: anywhere;
+}
+
+.memory-inspector__files li strong {
+  color: #ffe7a3;
+  white-space: nowrap;
+}
+
+.memory-inspector__preview pre {
+  max-height: 210px;
+  margin: 8px 0 0;
+  overflow: auto;
+  border: 1px solid rgba(160, 178, 210, 0.16);
+  border-radius: 10px;
+  color: #eef3ff;
+  background: rgba(5, 8, 13, 0.76);
+  padding: 10px;
+  font-family: "Cascadia Code", Consolas, "Courier New", monospace;
+  font-size: 0.72rem;
+  line-height: 1.42;
+  white-space: pre-wrap;
+}
+
+.memory-inspector__log li {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .agent-scan {
   display: grid;
   gap: 8px;
@@ -838,6 +1010,40 @@ button {
   color: var(--muted);
   font-size: 0.72rem;
   line-height: 1.4;
+}
+
+.agent-scan__target {
+  display: grid;
+  gap: 5px;
+}
+
+.agent-scan__target span {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.agent-scan__target select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: rgba(5, 8, 13, 0.72);
+  padding: 8px;
+  font-size: 0.72rem;
+}
+
+.agent-scan__paths {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.agent-scan__paths span {
+  overflow-wrap: anywhere;
 }
 
 .agent-scan__error {
@@ -997,11 +1203,34 @@ button {
   background: rgba(255, 130, 122, 0.12);
 }
 
+.chat-panel__header-button--active {
+  border-color: rgba(92, 200, 167, 0.46);
+  color: #06100d;
+  background: var(--accent);
+}
+
 .chat-panel__header-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 7px;
+}
+
+.chat-panel__focus-badge {
+  border: 1px solid rgba(92, 200, 167, 0.28);
+  border-radius: 999px;
+  color: #9ff0d4;
+  background: rgba(92, 200, 167, 0.08);
+  padding: 5px 9px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.chat-panel__focus-badge--reference {
+  border-color: rgba(255, 212, 122, 0.3);
+  color: #ffe7a3;
+  background: rgba(255, 212, 122, 0.08);
 }
 
 .chat-panel__loading {

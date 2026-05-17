@@ -4,6 +4,7 @@ import { BackupControls } from "./components/BackupControls";
 import { ChatPanel } from "./components/ChatPanel";
 import { CommandRunner } from "./components/CommandRunner";
 import { CursorPromptModal } from "./components/CursorPromptModal";
+import { MemoryInspector } from "./components/MemoryInspector";
 import { OpenAISettingsPanel } from "./components/OpenAISettingsPanel";
 import { ProjectNotesPanel } from "./components/ProjectNotesPanel";
 import { ProjectSelector } from "./components/ProjectSelector";
@@ -11,7 +12,7 @@ import { ResizableWarRoomGrid } from "./components/ResizableWarRoomGrid";
 import { WarRoomSummary } from "./components/WarRoomSummary";
 import { useWarRoomState } from "./hooks/useWarRoomState";
 
-type DrawerId = "project" | "notes" | "agents" | "ai" | "runner" | "backups";
+type DrawerId = "project" | "notes" | "agents" | "memory" | "ai" | "runner" | "backups";
 
 const DRAWER_STORAGE_KEY = "war-room:active-drawer";
 
@@ -19,6 +20,7 @@ const drawerButtons: Array<{ id: DrawerId; label: string }> = [
   { id: "project", label: "Project" },
   { id: "notes", label: "Notes" },
   { id: "agents", label: "Agents" },
+  { id: "memory", label: "Memory Inspector" },
   { id: "ai", label: "AI Settings" },
   { id: "runner", label: "Command Runner" },
   { id: "backups", label: "Backups" }
@@ -37,8 +39,15 @@ function App() {
     openAISettings,
     openAILaneLoading,
     groupSynthesisLoading,
+    autoCouncilLoading,
+    autoCouncilEnabled,
     panelWidths,
     promptHistory,
+    localWorkspaceRoot,
+    activeProjectFocus,
+    referenceProjectContext,
+    projectAliases,
+    memoryInspector,
     summary,
     fullState,
     individualChats,
@@ -54,6 +63,14 @@ function App() {
     cancelOpenAIRequest,
     synthesizeGroupPlan,
     cancelGroupSynthesis,
+    updateAutoCouncilEnabled,
+    updateLocalWorkspaceRoot,
+    updateProjectAliases,
+    clearReferenceProjectContext,
+    refreshMemoryInspector,
+    clearCachedMemory,
+    toggleVerboseMemoryLogging,
+    cancelAutoCouncil,
     updateProjectNotes,
     sendNotesToGroup,
     sendCommandOutputToGroup,
@@ -85,9 +102,33 @@ function App() {
         chat={groupChat}
         messages={chats.group}
         isGroupPanel
-        isLoading={groupSynthesisLoading}
+        isLoading={groupSynthesisLoading || autoCouncilLoading}
         headerAction={
           <div className="chat-panel__header-actions">
+            <span className="chat-panel__focus-badge">Focus: {activeProjectFocus}</span>
+            {referenceProjectContext && (
+              <>
+                <span className="chat-panel__focus-badge chat-panel__focus-badge--reference">
+                  Ref: {referenceProjectContext}
+                </span>
+                <button
+                  className="chat-panel__header-button"
+                  type="button"
+                  onClick={clearReferenceProjectContext}
+                >
+                  Clear Reference
+                </button>
+              </>
+            )}
+            <button
+              className={`chat-panel__header-button ${
+                autoCouncilEnabled ? "chat-panel__header-button--active" : ""
+              }`}
+              type="button"
+              onClick={() => updateAutoCouncilEnabled(!autoCouncilEnabled)}
+            >
+              Auto Council: {autoCouncilEnabled ? "On" : "Off"}
+            </button>
             <button
               className="chat-panel__header-button"
               type="button"
@@ -119,6 +160,15 @@ function App() {
             >
               Ask All Advisors
             </button>
+            {autoCouncilLoading && (
+              <button
+                className="chat-panel__header-button chat-panel__header-button--danger"
+                type="button"
+                onClick={cancelAutoCouncil}
+              >
+                Cancel Auto Council
+              </button>
+            )}
           </div>
         }
         onSendMessage={sendMessage}
@@ -161,7 +211,14 @@ function App() {
         {activeDrawer && (
           <section className="workspace-drawer" aria-label={`${activeDrawer} drawer`}>
             {activeDrawer === "project" && (
-              <ProjectSelector project={project} onUpdateProject={updateProject} />
+              <ProjectSelector
+                project={project}
+                localWorkspaceRoot={localWorkspaceRoot}
+                projectAliases={projectAliases}
+                onUpdateProject={updateProject}
+                onUpdateLocalWorkspaceRoot={updateLocalWorkspaceRoot}
+                onUpdateProjectAliases={updateProjectAliases}
+              />
             )}
 
             {activeDrawer === "notes" && (
@@ -183,8 +240,21 @@ function App() {
               <AgentsDrawer
                 agents={agentDefinitions}
                 projectPath={project.path}
+                localWorkspaceRoot={localWorkspaceRoot}
+                activeProjectFocus={activeProjectFocus}
                 onSendScanResultToGroup={sendCarlosScanResultToGroup}
                 onSendScanResultToCarlos={sendCarlosScanResultToChat}
+              />
+            )}
+
+            {activeDrawer === "memory" && (
+              <MemoryInspector
+                activeProjectFocus={activeProjectFocus}
+                referenceProjectContext={referenceProjectContext}
+                inspector={memoryInspector}
+                onRefreshMemory={refreshMemoryInspector}
+                onClearCachedMemory={clearCachedMemory}
+                onToggleVerboseLogging={toggleVerboseMemoryLogging}
               />
             )}
 
